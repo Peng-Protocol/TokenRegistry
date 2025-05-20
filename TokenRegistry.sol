@@ -1,14 +1,15 @@
 /*
 SPDX-License-Identifier: BSD-3-Clause
 Recent Changes:
+- 2025-05-20: Modified initializeBalances to accept single token with multiple users, added initializeTokens for single user with multiple tokens.
+- 2025-05-20: Added BalanceUpdateFailed event for failed balanceOf calls.
 - 2025-05-19: Added getAllTokens, getAllUsers, getTopHolders, getTokenSummary with maxIterations.
 - 2025-05-19: Added tokenExists mapping and users array, updated updateBalance.
 - 2025-05-19: Renamed transfer to rTransfer, transferFrom to rTransferFrom, setRegistry to initializeBalances.
-- 2025-05-19: Updated initializeBalances to accept address[] tokens and address[] users.
 - 2025-05-19: Initial contract implementation with proxy transfer and balance tracking.
 */
 
-pragma solidity ^0.8.2;
+pragma solidity 0.8.2;
 
 // Interface for ERC20 standard functions
 interface IERC20 {
@@ -30,6 +31,7 @@ contract TokenRegistry {
     // Events for balance updates and token registration
     event BalanceUpdated(address indexed user, address indexed token, uint256 balance);
     event TokenRegistered(address indexed user, address indexed token);
+    event BalanceUpdateFailed(address indexed user, address indexed token);
 
     // Proxy transfer for ERC20 token, updates registry balances
     function rTransfer(address token, address to, uint256 amount) external {
@@ -62,17 +64,26 @@ contract TokenRegistry {
         updateBalance(token, to);
     }
 
-    // Initialize or update balances for multiple users and tokens
-    function initializeBalances(address[] memory tokens, address[] memory users) external {
-        require(tokens.length == users.length, "Array length mismatch");
-        require(tokens.length > 0, "Empty arrays");
+    // Initialize or update balances for a single token and multiple users
+    function initializeBalances(address token, address[] memory users) external {
+        require(token != address(0), "Invalid token address");
+        require(users.length > 0, "Empty users array");
+
+        for (uint256 i = 0; i < users.length; i++) {
+            address user = users[i];
+            require(user != address(0), "Invalid user address");
+            updateBalance(token, user);
+        }
+    }
+
+    // Initialize or update balances for a single user and multiple tokens
+    function initializeTokens(address user, address[] memory tokens) external {
+        require(user != address(0), "Invalid user address");
+        require(tokens.length > 0, "Empty tokens array");
 
         for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
-            address user = users[i];
             require(token != address(0), "Invalid token address");
-            require(user != address(0), "Invalid user address");
-
             updateBalance(token, user);
         }
     }
@@ -81,10 +92,10 @@ contract TokenRegistry {
     function updateBalance(address token, address user) internal {
         // Get current balance from ERC20 contract
         uint256 balance;
-        // Handle non-standard ERC20 tokens gracefully
         try IERC20(token).balanceOf(user) returns (uint256 result) {
             balance = result;
         } catch {
+            emit BalanceUpdateFailed(user, token);
             balance = 0; // Graceful degradation for invalid tokens
         }
 
