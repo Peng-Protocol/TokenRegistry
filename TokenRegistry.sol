@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: BSD-3-Clause
 /*
-SPDX-License-Identifier: BSD-3-Clause
 Recent Changes:
+- 2025-07-24: The parameter users In the initializeBalances function was renamed to userAddresses to avoid shadowing the contract's state variable users.
 - 2025-05-20: Modified initializeBalances to accept single token with multiple users, added initializeTokens for single user with multiple tokens.
 - 2025-05-20: Added BalanceUpdateFailed event for failed balanceOf calls.
 - 2025-05-19: Added getAllTokens, getAllUsers, getTopHolders, getTokenSummary with maxIterations.
@@ -9,7 +10,7 @@ Recent Changes:
 - 2025-05-19: Initial contract implementation with proxy transfer and balance tracking.
 */
 
-pragma solidity 0.8.2;
+pragma solidity ^0.8.2;
 
 // Interface for ERC20 standard functions
 interface IERC20 {
@@ -65,12 +66,12 @@ contract TokenRegistry {
     }
 
     // Initialize or update balances for a single token and multiple users
-    function initializeBalances(address token, address[] memory users) external {
+    function initializeBalances(address token, address[] memory userAddresses) external {
         require(token != address(0), "Invalid token address");
-        require(users.length > 0, "Empty users array");
+        require(userAddresses.length > 0, "Empty users array");
 
-        for (uint256 i = 0; i < users.length; i++) {
-            address user = users[i];
+        for (uint256 i = 0; i < userAddresses.length; i++) {
+            address user = userAddresses[i];
             require(user != address(0), "Invalid user address");
             updateBalance(token, user);
         }
