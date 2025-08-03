@@ -1,41 +1,37 @@
-# Token Registry System Specification
-
-This document specifies the system comprising `TokenRegistry.sol`. Built for Solidity 0.8.2 with BSD-3-Clause license, the contract manages onchain balance and token tracking. This specification details data structures, operations, and design considerations, aligning with the provided contracts.
+# Token Registry System Documentation
+This document specifies the system comprising `TokenRegistry.sol`. Built for Solidity ^0.8.2 with BSL-1.1 license, the contract manages onchain token address tracking for ERC20 tokens. This specification details data structures, operations, and design considerations, aligning with the provided contract.
 
 ## TokenRegistry.sol
 
-`TokenRegistry.sol` tracks user balances and token metadata for ERC20 tokens, allowing onchain holder queries. 
+`TokenRegistry.sol` tracks user-token associations for ERC20 tokens, enabling onchain holder queries using real-time balance checks.
 
 ### 1. Data Structures
-- **Mappings**:
-  - `userBalances[user][token]`: Balance of `token` for `user`.
+- **Mappings** (private):
+  - `userTokenExists[user][token]`: Boolean indicating if `user` holds `token`.
   - `userTokens[user]`: Array of token addresses for `user`.
   - `tokenExists[token]`: Tracks unique tokens.
-- **Arrays**:
+- **Arrays** (private):
   - `users`: All users with registered tokens.
 - **Events**:
-  - `BalanceUpdated(user, token, balance)`: Emitted on balance updates.
   - `TokenRegistered(user, token)`: Emitted on new token registration.
-  - `BalanceUpdateFailed(user, token)`: Emitted on failed balance queries.
+  - `BalanceUpdateFailed(user, token)`: Emitted on failed balance queries during initialization.
 
 ### 2. Core Functions
-- **rTransfer(token, to, amount)**: Proxy for ERC20 `transfer`. Updates balances for sender and recipient via `updateBalance`.
-- **rTransferFrom(token, from, to, amount)**: Proxy for ERC20 `transferFrom`. Updates balances for `from` and `to`.
-- **initializeBalances(token, users)**: Updates balances for a token across multiple users.
-- **initializeTokens(user, tokens)**: Updates balances for a user across multiple tokens.
-- **updateBalance(token, user)**: Internal. Queries ERC20 `balanceOf`, updates `userBalances`, and registers tokens/users. Uses `try/catch` for graceful degradation (sets balance to 0 on failure).
+- **initializeBalances(token, userAddresses)**: Registers a token for multiple users, storing token addresses and validating via `balanceOf`.
+- **initializeTokens(user, tokens)**: Registers multiple tokens for a user, storing token addresses and validating via `balanceOf`. Both emit `BalanceUpdateFailed` on failed `balanceOf` calls.
 
 ### 3. View Functions
 - **getTokens(user)**: Returns user’s token list.
-- **getBalance(user, token)**: Returns user’s balance for a token.
-- **getAllBalances(user)**: Returns user’s tokens and balances.
+- **getBalance(user, token)**: Returns real-time `balanceOf` for a user’s token.
+- **getAllBalances(user)**: Returns user’s tokens and real-time `balanceOf` results.
 - **getAllTokens(maxIterations)**: Returns unique tokens, limited by `maxIterations`.
 - **getAllUsers(maxIterations)**: Returns users, limited by `maxIterations`.
-- **getTopHolders(token, n, maxIterations)**: Returns top `n` holders and balances for a token, sorted descending, limited by `maxIterations`.
-- **getTokenSummary(token, maxIterations)**: Returns total balance and holder count for a token, limited by `maxIterations`.
+- **getTopHolders(token, n, maxIterations)**: Returns top `n` holders and real-time `balanceOf` results for a token, sorted descending, limited by `maxIterations`.
+- **getTokenSummary(token, maxIterations)**: Returns total real-time balance and holder count for a token, limited by `maxIterations`.
 
 ### 4. Design Notes
 - **Decimal Handling**: Relies on ERC20 contract for decimals, no normalization.
 - **Gas Efficiency**: Sparse storage with dynamic arrays; `maxIterations` limits gas-intensive loops.
-- **Error Handling**: `try/catch` in `updateBalance` ensures graceful degradation.
+- **Error Handling**: `try/catch` in view functions returns 0 on failure; `BalanceUpdateFailed` emitted only in initialization functions.
 - **Access Control**: Public functions, no ownership.
+- **Privacy**: Mappings and arrays are private to prevent direct access, relying on view functions for queries.
