@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSL-1.1
 /*
 Recent Changes:
+- 2025-08-04: Modified initializeBalances and initializeTokens to remove tokens with zero balance from userTokens and userTokenExists.
 - 2025-08-03: Removed BalanceUpdateFailed emissions from view functions to resolve TypeError; kept in initialize functions.
 - 2025-08-03: Removed rTransfer, rTransferFrom; adjusted initialize functions to store only token addresses; made mappings private; updated view functions to use IERC20.balanceOf.
 - 2025-07-24: Renamed users parameter in initializeBalances to userAddresses.
@@ -25,8 +26,9 @@ contract TokenRegistry {
     // Array of all users with registered tokens
     address[] private users;
 
-    // Events for token registration
+    // Events for token registration and removal
     event TokenRegistered(address indexed user, address indexed token);
+    event TokenRemoved(address indexed user, address indexed token);
     event BalanceUpdateFailed(address indexed user, address indexed token);
 
     // Initialize token addresses for a single token and multiple users
@@ -37,7 +39,18 @@ contract TokenRegistry {
         for (uint256 i = 0; i < userAddresses.length; i++) {
             address user = userAddresses[i];
             require(user != address(0), "Invalid user address");
-            if (!userTokenExists[user][token]) {
+
+            // Check balance to determine registration or removal
+            uint256 balance;
+            try IERC20(token).balanceOf(user) returns (uint256 result) {
+                balance = result;
+            } catch {
+                emit BalanceUpdateFailed(user, token);
+                balance = 0;
+            }
+
+            if (balance > 0 && !userTokenExists[user][token]) {
+                // Register token if balance is positive and not already registered
                 userTokenExists[user][token] = true;
                 userTokens[user].push(token);
                 emit TokenRegistered(user, token);
@@ -54,9 +67,16 @@ contract TokenRegistry {
                 if (!userExists) {
                     users.push(user);
                 }
-                // Check balance to ensure token validity
-                try IERC20(token).balanceOf(user) {} catch {
-                    emit BalanceUpdateFailed(user, token);
+            } else if (balance == 0 && userTokenExists[user][token]) {
+                // Remove token if balance is zero and token is registered
+                userTokenExists[user][token] = false;
+                for (uint256 j = 0; j < userTokens[user].length; j++) {
+                    if (userTokens[user][j] == token) {
+                        userTokens[user][j] = userTokens[user][userTokens[user].length - 1];
+                        userTokens[user].pop();
+                        emit TokenRemoved(user, token);
+                        break;
+                    }
                 }
             }
         }
@@ -70,7 +90,18 @@ contract TokenRegistry {
         for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
             require(token != address(0), "Invalid token address");
-            if (!userTokenExists[user][token]) {
+
+            // Check balance to determine registration or removal
+            uint256 balance;
+            try IERC20(token).balanceOf(user) returns (uint256 result) {
+                balance = result;
+            } catch {
+                emit BalanceUpdateFailed(user, token);
+                balance = 0;
+            }
+
+            if (balance > 0 && !userTokenExists[user][token]) {
+                // Register token if balance is positive and not already registered
                 userTokenExists[user][token] = true;
                 userTokens[user].push(token);
                 emit TokenRegistered(user, token);
@@ -87,9 +118,16 @@ contract TokenRegistry {
                 if (!userExists) {
                     users.push(user);
                 }
-                // Check balance to ensure token validity
-                try IERC20(token).balanceOf(user) {} catch {
-                    emit BalanceUpdateFailed(user, token);
+            } else if (balance == 0 && userTokenExists[user][token]) {
+                // Remove token if balance is zero and token is registered
+                userTokenExists[user][token] = false;
+                for (uint256 j = 0; j < userTokens[user].length; j++) {
+                    if (userTokens[user][j] == token) {
+                        userTokens[user][j] = userTokens[user][userTokens[user].length - 1];
+                        userTokens[user].pop();
+                        emit TokenRemoved(user, token);
+                        break;
+                    }
                 }
             }
         }
