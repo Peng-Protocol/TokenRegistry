@@ -18,8 +18,8 @@ This document specifies the system comprising `TokenRegistry.sol`. Built for Sol
   - `BalanceUpdateFailed(user, token)`: Emitted on failed balance queries during initialization.
 
 ### 2. Core Functions
-- **initializeBalances(token, userAddresses)**: Registers a token for multiple users or removes it if the balance is zero, storing token addresses and validating via `balanceOf`. Emits `TokenRegistered` or `TokenRemoved` accordingly.
-- **initializeTokens(user, tokens)**: Registers multiple tokens for a user or removes them if the balance is zero, storing token addresses and validating via `balanceOf`. Emits `TokenRegistered` or `TokenRemoved` accordingly. Both emit `BalanceUpdateFailed` on failed `balanceOf` calls.
+- **initializeBalances(token, userAddresses)**: Registers a token for multiple users or removes it if the balance is zero, storing token addresses and validating via `balanceOf`. For a user’s first call with zero balance, no registration occurs, no events are emitted, and `userTokenExists` and `userTokens` remain unchanged. Emits `TokenRegistered` for non-zero balances or `TokenRemoved` for zero balances if previously registered. Emits `BalanceUpdateFailed` on failed `balanceOf` calls.
+- **initializeTokens(user, tokens)**: Registers multiple tokens for a user or removes them if the balance is zero, storing token addresses and validating via `balanceOf`. For a token’s first call with zero balance, no registration occurs, no events are emitted, and `userTokenExists` and `userTokens` remain unchanged. Emits `TokenRegistered` for non-zero balances or `TokenRemoved` for zero balances if previously registered. Emits `BalanceUpdateFailed` on failed `balanceOf` calls.
 
 ### 3. View Functions
 - **getTokens(user)**: Returns user’s token list.
