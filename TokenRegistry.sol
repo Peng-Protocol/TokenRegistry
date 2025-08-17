@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BSL-1.1
+// SPDX-License-Identifier: BSL 1.1 - Peng Protocol
 /*
 Recent Changes:
 - 2025-08-04: Modified initializeBalances and initializeTokens to remove tokens with zero balance from userTokens and userTokenExists.
